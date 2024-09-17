@@ -18,9 +18,9 @@ async function main() {
 const app = express();
 app.engine('ejs', ejsMate);
 
-app.use(express.json()) // for parsing application/json
-app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
-app.use(methodOverride('_method'))
+app.use(express.json()); // for parsing application/json
+app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.use(methodOverride('_method'));
 
 
 app.set('view engine', 'ejs')
