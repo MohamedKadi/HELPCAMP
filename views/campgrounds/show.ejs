@@ -6,11 +6,10 @@
     <title>Document</title>
 </head>
 <body>
-    <h1>All CAMPS</h1>
+    <h1>Show CAMPGROUND</h1>
     <ul>
-        <% for(let camp of camps) { %>
-        <li><a href="/campgrounds/<%= camp._id %>"><%= camp.title %></a></li>
-        <% } %>
+        <li><%= camp.title %> : <%= camp.location %></li>
     </ul>
+    <a href="/campgrounds">All camps</a>
 </body>
 </html>
