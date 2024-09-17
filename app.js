@@ -4,6 +4,7 @@ const ejs = require('ejs');
 const path =require('path');
 const Campground = require('./models/campground');
 const methodOverride = require('method-override');
+const ejsMate = require('ejs-mate');
 
 main().catch(err => console.log(err));
 
@@ -15,6 +16,8 @@ async function main() {
 
 
 const app = express();
+app.engine('ejs', ejsMate);
+
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 app.use(methodOverride('_method'))
