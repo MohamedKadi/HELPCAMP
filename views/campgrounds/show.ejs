@@ -10,6 +10,10 @@
     <ul>
         <li><%= camp.title %> : <%= camp.location %></li>
     </ul>
+    <a href="/campgrounds/<%= camp._id %>/edit">Edit</a>
     <a href="/campgrounds">All camps</a>
+    <form action="/campgrounds/<%= camp._id %>?_method=DELETE" method="post">
+        <button>DELETE</button>
+    </form>
 </body>
 </html>
