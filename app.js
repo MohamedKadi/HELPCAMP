@@ -5,8 +5,12 @@ const path =require('path');
 const Campground = require('./models/campground');
 const methodOverride = require('method-override');
 const ejsMate = require('ejs-mate');
-const AppError = require('./AppError');
+const AppError = require('./helpers/AppError');
 const { error } = require('console');
+const wrapAsync = require('./helpers/catchAsync');
+const Joi = require('joi');
+const campground = require('./models/campground');
+
 
 main().catch(err => console.log(err));
 
@@ -28,11 +32,6 @@ app.use(methodOverride('_method'));
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname,'/views'))
 
-function wrapAsync(fn){
-    return function(req,res,next){
-        fn(req,res,next).catch(err => next(e));
-    }
-}
 
 app.get('/',(req,res)=>{
     res.render('home');
@@ -51,6 +50,27 @@ app.get('/campgrounds/new', (req, res)=>{
 })
 
 app.post('/campgrounds',wrapAsync(async(req,res,next)=>{
+        // if(!req.body.campground){
+        //     throw new AppError('Invalid Data or incomplete',400);
+        // }
+        const campgroundSchema = Joi.object({
+            campground: Joi.object({
+                title: Joi.string()
+                .regex(/^[a-zA-Z]+$/)
+                .min(3)
+                .max(30)
+                .required(),
+                price: Joi.number().required().min(0),
+                image: Joi.string().required(),
+                location: Joi.string().required(),
+                description: Joi.string().required(),
+            }).required()
+        })
+        const {error}=campgroundSchema.validate(req.body);
+        if(error){
+            const errorMsg = error.details.map(el => el.message).join(',');
+            throw new AppError(errorMsg,400);
+        }
         const {title, location} = req.body.campground;
         const newCampground = await Campground.create({title: title, location: location});
         res.redirect('/campgrounds/'+ newCampground._id);
@@ -75,6 +95,7 @@ app.get('/campgrounds/:id/edit',wrapAsync(async (req, res,next)=>{
 app.put('/campgrounds/:id', wrapAsync(async (req,res,next)=>{
         const {id} = req.params;
         const camp = await Campground.findByIdAndUpdate(id,req.body.campground, {runValidators: true, new: true});
+
         res.redirect('/campgrounds/'+ id);
 
 }))
@@ -84,9 +105,16 @@ app.delete('/campgrounds/:id', wrapAsync(async (req,res,next)=>{
         res.redirect('/campgrounds');  
 }))
 
+app.all('*',(req,res,next)=>{
+    next(new AppError('Page Not Found', 404));
+})
+
 app.use((err, req, res, next) => {
-    const {status=500, message='Something is Off'}= err;
-    res.status(status).send(message);
+    const {status = 500}= err;
+    if(!err.message){
+        err.message = 'something is off';
+    }
+    res.status(status).render('error',{err});
 })
 
 app.listen(3000, ()=>{
