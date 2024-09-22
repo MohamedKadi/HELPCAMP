@@ -10,7 +10,8 @@ const { error } = require('console');
 const wrapAsync = require('./helpers/catchAsync');
 const Joi = require('joi');
 const campground = require('./models/campground');
-
+//chd dkchi liwst obj
+const {campgroundSchema} = require('./validateSchemas');
 
 main().catch(err => console.log(err));
 
@@ -32,6 +33,16 @@ app.use(methodOverride('_method'));
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname,'/views'))
 
+const validateCamp = (req,res,next)=>{
+    //is not a schema it just to validate our data
+    
+    const {error}=campgroundSchema.validate(req.body);
+    if(error){
+        const errorMsg = error.details.map(el => el.message).join(',');
+        throw new AppError(errorMsg,400);
+    }
+    next();
+}
 
 app.get('/',(req,res)=>{
     res.render('home');
@@ -49,28 +60,11 @@ app.get('/campgrounds/new', (req, res)=>{
     res.render('campgrounds/new');
 })
 
-app.post('/campgrounds',wrapAsync(async(req,res,next)=>{
+app.post('/campgrounds', validateCamp,wrapAsync(async(req,res,next)=>{
         // if(!req.body.campground){
         //     throw new AppError('Invalid Data or incomplete',400);
         // }
-        const campgroundSchema = Joi.object({
-            campground: Joi.object({
-                title: Joi.string()
-                .regex(/^[a-zA-Z]+$/)
-                .min(3)
-                .max(30)
-                .required(),
-                price: Joi.number().required().min(0),
-                image: Joi.string().required(),
-                location: Joi.string().required(),
-                description: Joi.string().required(),
-            }).required()
-        })
-        const {error}=campgroundSchema.validate(req.body);
-        if(error){
-            const errorMsg = error.details.map(el => el.message).join(',');
-            throw new AppError(errorMsg,400);
-        }
+        
         const {title, location} = req.body.campground;
         const newCampground = await Campground.create({title: title, location: location});
         res.redirect('/campgrounds/'+ newCampground._id);
@@ -92,7 +86,7 @@ app.get('/campgrounds/:id/edit',wrapAsync(async (req, res,next)=>{
         res.render('campgrounds/edit',{camp});
 }))
 
-app.put('/campgrounds/:id', wrapAsync(async (req,res,next)=>{
+app.put('/campgrounds/:id',validateCamp, wrapAsync(async (req,res,next)=>{
         const {id} = req.params;
         const camp = await Campground.findByIdAndUpdate(id,req.body.campground, {runValidators: true, new: true});
 
