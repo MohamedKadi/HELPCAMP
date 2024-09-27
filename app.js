@@ -9,9 +9,10 @@ const AppError = require('./helpers/AppError');
 const { error } = require('console');
 const wrapAsync = require('./helpers/catchAsync');
 const Joi = require('joi');
-const campground = require('./models/campground');
+const Review = require('./models/review');
 //chd dkchi liwst obj
-const {campgroundSchema} = require('./validateSchemas');
+const {campgroundSchema, reviewSchema} = require('./validateSchemas');
+const catchAsync = require('./helpers/catchAsync');
 
 main().catch(err => console.log(err));
 
@@ -37,6 +38,14 @@ const validateCamp = (req,res,next)=>{
     //is not a schema it just to validate our data
     
     const {error}=campgroundSchema.validate(req.body);
+    if(error){
+        const errorMsg = error.details.map(el => el.message).join(',');
+        throw new AppError(errorMsg,400);
+    }
+    next();
+}
+const validateReview = (req, res, next)=>{
+    const {error}=reviewSchema.validate(req.body);
     if(error){
         const errorMsg = error.details.map(el => el.message).join(',');
         throw new AppError(errorMsg,400);
@@ -71,7 +80,8 @@ app.post('/campgrounds', validateCamp,wrapAsync(async(req,res,next)=>{
 })) 
 app.get('/campgrounds/:id',wrapAsync(async(req,res,next)=>{
         const {id} = req.params;
-        const camp = await Campground.findById(id);
+        const camp = await Campground.findById(id).populate('reviews');
+        console.log(camp);
         if(!camp){
             throw new AppError('there is no such camp', 404);
         }
@@ -98,6 +108,23 @@ app.delete('/campgrounds/:id', wrapAsync(async (req,res,next)=>{
         await Campground.findByIdAndDelete(id);
         res.redirect('/campgrounds');  
 }))
+
+app.post('/campgrounds/:id/reviews',validateReview ,catchAsync(async (req,res) => {
+    const campground = await Campground.findById(req.params.id);
+    const review = new Review(req.body.review);
+    campground.reviews.push(review);
+    await review.save();
+    await campground.save();
+    res.redirect(`/campgrounds/${campground._id}`);
+}))
+app.delete('/campgrounds/:id/reviews/:reviewId',catchAsync(async (req,res) => {
+    const {id, reviewId}=req.params;
+    await Campground.findByIdAndUpdate(id,{$pull: {reviews: reviewId}});
+    await Review.findByIdAndDelete(req.params.reviewId);
+    res.redirect('/campgrounds/'+id);
+
+}));    
+
 
 app.all('*',(req,res,next)=>{
     next(new AppError('Page Not Found', 404));
